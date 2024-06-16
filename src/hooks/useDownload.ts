@@ -27,11 +27,12 @@ export const useDownload = async (
     const res = await api(params);
     const blob = new Blob([res]);
     // 兼容 edge 不支持 createObjectURL 方法
-    if ("msSaveOrOpenBlob" in navigator) return window.navigator.msSaveOrOpenBlob(blob, tempName + fileType);
+    const filename = res.filename || tempName + fileType;
+    if ("msSaveOrOpenBlob" in navigator) return window.navigator.msSaveOrOpenBlob(blob, filename);
     const blobUrl = window.URL.createObjectURL(blob);
     const exportFile = document.createElement("a");
     exportFile.style.display = "none";
-    exportFile.download = `${tempName}${fileType}`;
+    exportFile.download = filename;
     exportFile.href = blobUrl;
     document.body.appendChild(exportFile);
     exportFile.click();

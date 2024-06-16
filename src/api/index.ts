@@ -78,6 +78,28 @@ class RequestHttp {
           ElMessage.error(data.msg);
           return Promise.reject(data);
         }
+        // 对文件流做处理
+        if (response.request.responseType === "blob" && response.data instanceof Blob) {
+          if (response.data.type && response.data.type.toLowerCase().indexOf("json") != -1) {
+            response.data.text().then(errorMessage => {
+              const errorMessageData = JSON.parse(errorMessage);
+              ElMessage.error(errorMessageData.message || "读取错误");
+            });
+            return Promise.reject(data);
+          } else {
+            data.filename = undefined;
+            let filename = response.headers["filename"];
+            if (!filename) filename = response.headers["content-disposition"].split("=")[1];
+            let responseURL: string = (response.request && response.request.responseURL) || "";
+            if (filename) data.filename = decodeURIComponent(filename);
+            else if (
+              responseURL &&
+              [".xls", ".xlsx", ".doc", ".docx"].includes(responseURL.substring(responseURL.lastIndexOf(".")))
+            ) {
+              data.filename = decodeURIComponent(responseURL.substring(responseURL.lastIndexOf("/") + 1));
+            }
+          }
+        }
         // 成功请求（在页面上除非特殊情况，否则不用处理失败逻辑）
         return data;
       },
@@ -112,7 +134,7 @@ class RequestHttp {
     return this.service.delete(url, { params, ..._object });
   }
   download(url: string, params?: object, _object = {}): Promise<BlobPart> {
-    return this.service.post(url, params, { ..._object, responseType: "blob" });
+    return this.service.get(url, { params, ..._object, responseType: "blob" });
   }
 }
 
